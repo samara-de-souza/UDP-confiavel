@@ -37,6 +37,9 @@ public class Dispositivo {
             System.out.print("> ");
             String linha = leitor.readLine();
     
+            if (linha.startsWith("devices")) {
+                devices(); 
+            }
             if (linha.startsWith("talk ")) {
                 String[] partes = linha.split(" ", 3);
                 if (partes.length < 3) {
@@ -171,6 +174,19 @@ public class Dispositivo {
                     InetAddress.getByName(vizinho.ip), PORTA);
             socket.send(pacote);
             System.out.println("FILE enviado, aguardando ACK...");
+
+            byte[] buffer = new byte[2048];
+            DatagramPacket pacoteAck = new DatagramPacket(buffer, buffer.length);
+            socket.receive(pacoteAck);
+            String resposta = new String(pacoteAck.getData(), 0, pacoteAck.getLength());
+            System.out.println(resposta);
+
+            if (resposta.startsWith("ACK")) {
+                System.out.println("ACK recebido para o FILE");
+                chunk(vizinho.ip, id, nomeArquivo); 
+            } else {
+                System.out.println("ACK não recebido corretamente.");
+            }
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -273,12 +289,11 @@ public class Dispositivo {
             } catch (InterruptedException ignored) {}
         }
     }
-    
 
-    /* static void listarVizinhos() {
+    static void devices() {
         System.out.println("dispositivos ativos:");
         vizinhos.forEach((nome, vizinho) -> {
             System.out.println(" - " + nome + " (" + vizinho.ip + ")");
         });
-    } */
+    }
 }
