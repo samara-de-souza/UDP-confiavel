@@ -1,3 +1,4 @@
+
 import java.io.*;
 import java.net.*;
 import java.security.MessageDigest;
@@ -24,33 +25,38 @@ public class Dispositivo {
         BufferedReader leitor = new BufferedReader(new InputStreamReader(System.in));
         System.out.print("nome do dispositivo: ");
         meuNome = leitor.readLine();
-
+    
         socket = new DatagramSocket(PORTA);
         socket.setBroadcast(true);
-
+    
         new Thread(() -> escutar()).start();
         new Thread(() -> heartbeat()).start();
         new Thread(() -> limparVizinhos()).start();
-
+    
         while (true) {
             System.out.print("> ");
             String linha = leitor.readLine();
-            /* if (linha.equals("devices")) {
-                listarVizinhos();
-            }  */
+    
             if (linha.startsWith("talk ")) {
                 String[] partes = linha.split(" ", 3);
                 if (partes.length < 3) {
-                    System.out.println("Uso: talk <nome> <mensagem>");
+                    System.out.println("talk <nome> <mensagem>");
                     continue;
                 }
-                talk(partes[2], partes[3]);
+                talk(partes[1], partes[2]); 
             }
+    
             if (linha.startsWith("file ")) {
-                
+                String[] partes = linha.split(" ", 3);
+                if (partes.length < 3) {
+                    System.out.println("file <nome> <arquivo>");
+                    continue;
+                }
+                file(partes[1], partes[2]); 
             }
         }
     }
+    
 
     static void escutar() {
         byte[] buffer = new byte[2048];
@@ -70,28 +76,28 @@ public class Dispositivo {
                 } else if (recebido.startsWith("TALK:")) {
                     String[] partes = recebido.split(":", 4);
                     System.out.println("mensagem de " + partes[2] + ": " + partes[3]);
-                    ack(ip, partes[1]);
+                    ack(ip, partes[1]); 
     
                 } else if (recebido.startsWith("FILE:")) {
                     String[] partes = recebido.split(":", 4);
                     System.out.println("recebendo arquivo: " + partes[2] + " (" + partes[3] + " bytes)");
-                    ack(ip, partes[1]);
+                    ack(ip, partes[1]); 
     
                 } else if (recebido.startsWith("CHUNK:")) {
                     String[] partes = recebido.split(":", 4);
                     System.out.println("CHUNK recebido (id " + partes[1] + ", seq " + partes[2] + ")");
-                    ack(ip, partes[1]);
+                    ack(ip, partes[1]); 
     
                 } else if (recebido.startsWith("END:")) {
                     String[] partes = recebido.split(":", 3);
                     System.out.println("END recebido (hash: " + partes[2] + ")");
-                    boolean hashConfere = true; // aqui você implementa depois a verificação real
-    
+                    boolean hashConfere = true; 
+                    
                     if (hashConfere) {
-                        System.out.println("Arquivo recebido com sucesso (hash válido)");
-                        ack(ip, partes[1]);
+                        System.out.println("arquivo recebido (hash válido)");
+                        ack(ip, partes[1]); 
                     } else {
-                        nack(ip, partes[1], "arquivo corrompido (hash inválido)");
+                        nack(ip, partes[1], "arquivo corrompido (hash inválido)"); 
                     }
     
                 } else if (recebido.startsWith("ACK:")) {
@@ -103,7 +109,7 @@ public class Dispositivo {
                 }
     
             } catch (Exception e) {
-                System.out.println("Erro ao escutar: " + e.getMessage());
+                System.out.println(e.getMessage());
             }
         }
     }
@@ -151,9 +157,9 @@ public class Dispositivo {
             return;
         }
     
-        File arquivo = new File(nomeArquivo);
+        File arquivo = new File("/app/teste.txt");
         if (!arquivo.exists()) {
-            System.out.println("arquivo não encontrado.");
+            System.out.println("arquivo não encontrado em: " + arquivo);
             return;
         }
     

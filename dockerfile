@@ -2,7 +2,7 @@ FROM openjdk:17
 
 WORKDIR /app
 
-COPY Dispositivo.java .
+COPY . .
 
 RUN javac Dispositivo.java
 
