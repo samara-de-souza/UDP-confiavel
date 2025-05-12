@@ -104,8 +104,12 @@ public class Dispositivo {
                     }
     
                 } else if (recebido.startsWith("ACK:")) {
-                    System.out.println("ACK recebido para id " + recebido.split(":")[1]);
-    
+                    String id = recebido.split(":")[1];
+                    System.out.println("ACK recebido para id " + id);
+                    if (id.equals(String.valueOf(idGlobal - 1))) {  
+                        System.out.println("ACK recebido válido");
+                    }
+
                 } else if (recebido.startsWith("NACK:")) {
                     String[] partes = recebido.split(":", 3);
                     System.out.println("NACK recebido para id " + partes[1] + " motivo: " + partes[2]);
@@ -159,13 +163,13 @@ public class Dispositivo {
             System.out.println("dispositivo não encontrado: " + nome);
             return;
         }
-    
+        
         File arquivo = new File("/app/teste.txt");
         if (!arquivo.exists()) {
             System.out.println("arquivo não encontrado em: " + arquivo);
             return;
         }
-    
+        
         long tamanho = arquivo.length();
         String mensagem = "FILE:" + id + ":" + nomeArquivo + ":" + tamanho;
         try {
@@ -174,28 +178,41 @@ public class Dispositivo {
                     InetAddress.getByName(vizinho.ip), PORTA);
             socket.send(pacote);
             System.out.println("FILE enviado, aguardando ACK...");
-
+        
             byte[] buffer = new byte[2048];
             DatagramPacket pacoteAck = new DatagramPacket(buffer, buffer.length);
-            socket.receive(pacoteAck);
-            String resposta = new String(pacoteAck.getData(), 0, pacoteAck.getLength());
-            System.out.println(resposta);
-
-            if (resposta.startsWith("ACK")) {
-                System.out.println("ACK recebido para o FILE");
-                chunk(vizinho.ip, id, nomeArquivo); 
-            } else {
-                System.out.println("ACK não recebido corretamente.");
+        
+            socket.setSoTimeout(5000);
+        
+            boolean ackRecebido = false;
+            String resposta = "";
+            while (!ackRecebido) {
+                try {
+                    socket.receive(pacoteAck);  
+                    resposta = new String(pacoteAck.getData(), 0, pacoteAck.getLength());
+                    
+                    if (resposta.startsWith("ACK:" + id)) {
+                        ackRecebido = true;
+                        System.out.println("ACK recebido para o FILE");
+                        chunk(vizinho.ip, id, arquivo);  
+                    } else {
+                        System.out.println("Mensagem recebida não é um ACK para o FILE: " + resposta);
+                    }
+                } catch (SocketTimeoutException e) {
+                    System.out.println("Timeout aguardando ACK. Tentando novamente...");
+                    break;
+                }
             }
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.out.println("Erro no envio de FILE: " + e.getMessage());
         }
     }
+    
 
-    static void chunk(String ip, int id, String nomeArquivo) {
+    static void chunk(String ip, int id, File arquivo) {
         try {
-            FileInputStream in = new FileInputStream(nomeArquivo);
-            byte[] buffer = new byte[512];
+            FileInputStream in = new FileInputStream(arquivo);
+            byte[] buffer = new byte[1024]; 
             int bytesRead;
             int seq = 0;
     
@@ -210,14 +227,16 @@ public class Dispositivo {
                 socket.send(pacote);
                 System.out.println("CHUNK seq " + seq + " enviado");
                 seq++;
+    
                 Thread.sleep(100); 
             }
     
             in.close();
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.out.println("Erro no envio de CHUNK: " + e.getMessage());
         }
     }
+    
     
     static void end(String ip, int id, String nomeArquivo) {
         try {
